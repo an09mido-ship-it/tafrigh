@@ -1,0 +1,98 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default deny all access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null && request.auth.uid != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isBootstrapAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == 'ahmedschoolp@gmail.com' ||
+        request.auth.token.email == 'ahmed schoolp@gmail.com'
+      );
+    }
+
+    function isAdmin() {
+      return isBootstrapAdmin();
+    }
+
+    function isValidUserCreate(userId) {
+      let data = incoming();
+      return isValidId(userId) &&
+        data.keys().hasAll(['uid', 'email', 'role', 'status', 'createdAt']) &&
+        data.keys().hasOnly(['uid', 'email', 'displayName', 'photoURL', 'role', 'status', 'createdAt', 'lastLoginAt', 'blockedAt', 'blockedReason']) &&
+        data.uid == userId &&
+        data.uid == request.auth.uid &&
+        data.email is string && data.email.size() <= 256 &&
+        (isBootstrapAdmin() ? (data.role in ['admin', 'user']) : data.role == 'user') &&
+        data.status == 'active' &&
+        (!('displayName' in data) || data.displayName == null || (data.displayName is string && data.displayName.size() <= 150)) &&
+        (!('photoURL' in data) || data.photoURL == null || (data.photoURL is string && data.photoURL.size() <= 2048));
+    }
+
+    function isValidUserUpdate(userId) {
+      let data = incoming();
+      return isValidId(userId) &&
+        data.keys().hasAll(['uid', 'email', 'role', 'status']) &&
+        data.uid == userId &&
+        data.email == existing().email &&
+        (!('createdAt' in existing()) || !('createdAt' in data) || data.createdAt == existing().createdAt) &&
+        (!('displayName' in data) || data.displayName == null || (data.displayName is string && data.displayName.size() <= 150)) &&
+        (!('photoURL' in data) || data.photoURL == null || (data.photoURL is string && data.photoURL.size() <= 2048)) &&
+        (!('blockedReason' in data) || data.blockedReason == null || (data.blockedReason is string && data.blockedReason.size() <= 500)) &&
+        (
+          isAdmin() ||
+          (
+            isOwner(userId) &&
+            data.status == existing().status &&
+            (data.role == existing().role || data.role == 'user') &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'photoURL', 'lastLoginAt', 'role'])
+          )
+        );
+    }
+
+    // Health check collection for connection testing
+    match /test/{docId} {
+      allow get: if true;
+    }
+
+    // Admins registry
+    match /admins/{userId} {
+      allow get: if isSignedIn();
+      allow list: if isAdmin();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Users collection
+    match /users/{userId} {
+      allow get: if isSignedIn() && (isOwner(userId) || isAdmin());
+      allow list: if isAdmin();
+      allow create: if isSignedIn() && isOwner(userId) && isValidUserCreate(userId);
+      allow update: if isSignedIn() && (isOwner(userId) || isAdmin()) && isValidUserUpdate(userId);
+      allow delete: if isAdmin();
+    }
+  }
+}

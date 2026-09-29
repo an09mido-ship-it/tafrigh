@@ -1,0 +1,92 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User account information, role, and block status",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Firebase Auth UID of the user",
+          "maxLength": 128
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "User email address",
+          "maxLength": 256
+        },
+        "displayName": {
+          "type": "string",
+          "description": "User display name",
+          "maxLength": 150
+        },
+        "photoURL": {
+          "type": "string",
+          "description": "User avatar photo URL",
+          "maxLength": 1000
+        },
+        "role": {
+          "type": "string",
+          "enum": ["admin", "user"],
+          "description": "User role: admin or standard user"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["active", "blocked"],
+          "description": "Account status: active or blocked"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Account creation timestamp"
+        },
+        "lastLoginAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last sign in timestamp"
+        },
+        "blockedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when user was blocked"
+        },
+        "blockedReason": {
+          "type": "string",
+          "description": "Optional reason for blocking",
+          "maxLength": 500
+        }
+      },
+      "required": ["uid", "email", "role", "status", "createdAt"]
+    },
+    "AdminRecord": {
+      "title": "AdminRecord",
+      "description": "Authorized administrator record",
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Admin email",
+          "maxLength": 256
+        },
+        "addedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when granted admin status"
+        }
+      },
+      "required": ["email", "addedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Registered user accounts with status and role"
+    },
+    "/admins/{userId}": {
+      "schema": "AdminRecord",
+      "description": "Designated administrator credentials"
+    }
+  }
+}

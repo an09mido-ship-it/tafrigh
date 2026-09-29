@@ -1,0 +1,8 @@
+{
+  "name": "Remix Remix Remix: Remix: Remix: Saudi License Plate Extractor",
+  "description": "Batch processing system to extract Saudi car license plates from audio and video files using Gemini AI.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
